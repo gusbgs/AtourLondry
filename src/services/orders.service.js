@@ -1,33 +1,20 @@
-const crypto = require('crypto');
+const prisma = require('../config/prisma');
 
-let orders = [];
-
-const getAllOrders = () => {
-  return orders;
+const getAllOrders = async () => {
+  return prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
 };
 
-const getOrderById = (id) => {
-  return orders.find((order) => order.id === id) || null;
+const getOrderById = async (id) => {
+  return prisma.order.findUnique({ where: { id } });
 };
 
-const createOrder = ({ customerName, phone, serviceType, weightKg }) => {
-  const order = {
-    id: crypto.randomUUID(),
-    customerName,
-    phone,
-    serviceType,
-    weightKg,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  };
-  orders.push(order);
-  return order;
+const createOrder = async ({ customerName, phone, serviceType, weightKg }) => {
+  return prisma.order.create({
+    data: { customerName, phone, serviceType, weightKg },
+  });
 };
 
-const updateOrder = (id, data) => {
-  const index = orders.findIndex((order) => order.id === id);
-  if (index === -1) return null;
-
+const updateOrder = async (id, data) => {
   const filtered = {};
   for (const key of Object.keys(data)) {
     if (data[key] !== undefined) {
@@ -35,21 +22,17 @@ const updateOrder = (id, data) => {
     }
   }
 
-  orders[index] = {
-    ...orders[index],
-    ...filtered,
-    id: orders[index].id,
-    createdAt: orders[index].createdAt,
-  };
-  return orders[index];
+  return prisma.order.update({ where: { id }, data: filtered }).catch((err) => {
+    if (err.code === 'P2025') return null;
+    throw err;
+  });
 };
 
-const deleteOrder = (id) => {
-  const index = orders.findIndex((order) => order.id === id);
-  if (index === -1) return null;
-
-  const deleted = orders.splice(index, 1);
-  return deleted[0];
+const deleteOrder = async (id) => {
+  return prisma.order.delete({ where: { id } }).catch((err) => {
+    if (err.code === 'P2025') return null;
+    throw err;
+  });
 };
 
 module.exports = {
@@ -59,3 +42,4 @@ module.exports = {
   updateOrder,
   deleteOrder,
 };
+
